@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   TableContainer,
@@ -11,27 +11,22 @@ import {
 } from "@mui/material";
 import Navbar from "./DonarNavbar";
 import { Link } from "react-router-dom";
-const ListAllDonations = ()=> {
-  const items = [
-    {
-      id: 1,
-      name: "Item 1",
-      description: "Description 1",
-      price: 10.99,
-      quantity: 12,
-      status: "Reached Warehouse",
-      date: "12/04/2023",
-    },
-    {
-      id: 2,
-      name: "Item 2",
-      description: "Description 2",
-      price: 15.99,
-      quantity: 17,
-      status: "Shipped from Warehouse",
-      date: "13/05/2023",
-    },
-  ];
+import apis from "../../api"; // Import the getDonorItems function
+
+const ListAllDonations = () => {
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    // Fetch donor items when the component mounts
+    apis
+      .getAllDonorItems()
+      .then((response) => {
+        setItems(response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching donor items: ", error);
+      });
+  }, []);
 
   return (
     <>
@@ -68,11 +63,11 @@ const ListAllDonations = ()=> {
                 <TableCell>{item.id}</TableCell>
                 <TableCell>
                   <Link
-                    to={`/itemdetail/${item.id}`} 
+                    to={`/itemdetail/${item.id}`}
                     style={{ textDecoration: "none", color: "black" }}
                   >
                     {item.name}
-                  </Link> 
+                  </Link>
                 </TableCell>
                 <TableCell>{item.description}</TableCell>
                 <TableCell>{item.status}</TableCell>
@@ -83,6 +78,6 @@ const ListAllDonations = ()=> {
       </TableContainer>
     </>
   );
-}
+};
 
 export default ListAllDonations;

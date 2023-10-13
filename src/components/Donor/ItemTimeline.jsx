@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Container,
   Typography,
@@ -8,36 +8,43 @@ import {
   StepLabel,
 } from "@mui/material";
 import Navbar from "./DonarNavbar";
+import { useParams } from "react-router-dom"; // Import useParams to get the itemId
+import apis from "../../api"; // Import the getItemDetailsById function
 
-const items = [
-  {
-    id: 1,
-    name: "Item 1",
-    description: "Description 1",
-    price: 10.99,
-    quantity: 12,
-    status: "Reached Warehouse",
-  },
-  {
-    id: 2,
-    name: "Item 2",
-    description: "Description 2",
-    price: 15.99,
-    quantity: 17,
-    status: "Shipped from Warehouse",
-  },
+const steps = [
+  "Donation Placed",
+  "Picked Up",
+  "Reached Warehouse",
+  "Shipped from Warehouse",
+  "Reached Organization",
 ];
 
-const ItemTimeline = ({ itemId })=> {
-  // Define the possible steps in your timeline
-  const steps = [
-    "Donation Placed",
-    "Picked Up",
-    "Reached Warehouse",
-    "Shipped from Warehouse",
-    "Reached Organization",
-  ];
-  const item = items.find((item) => item.id === parseInt(itemId, 10));
+const ItemTimeline = ({ itemId }) => {
+  const [item, setItem] = useState(null);
+
+  useEffect(() => {
+    apis
+      .getDonorItemById(itemId)
+      .then((response) => {
+        setItem(response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching item details: ", error);
+      });
+  }, [itemId]);
+
+  if (!item) {
+    return (
+      <Container maxWidth="md">
+        <Paper elevation={3} style={{ padding: "20px", marginTop: "20px" }}>
+          <Typography variant="h5" align="center" gutterBottom>
+            <strong>Loading...</strong>
+          </Typography>
+        </Paper>
+      </Container>
+    );
+  }
+
   const currentStepIndex = steps.indexOf(item.status);
 
   return (
@@ -73,16 +80,19 @@ const ItemTimeline = ({ itemId })=> {
               <strong>Quantity:</strong> {item.quantity}
             </Typography>
             <Typography variant="body1" style={{ fontSize: "1.2rem" }}>
-              <strong>Price:</strong> ${item.price.toFixed(2)}
+              <strong>Expiration Date:</strong> {item.expirationDate}
             </Typography>
             <Typography variant="body1" style={{ fontSize: "1.2rem" }}>
-              <strong>Expiration Date:</strong> {item.expirationDate}
+              <strong>Drop Location:</strong> {item.dropLocation}
+            </Typography>
+            <Typography variant="body1" style={{ fontSize: "1.2rem" }}>
+              <strong>Anonymous Donation:</strong> {item.anonymousDonation}
             </Typography>
           </div>
         </Paper>
       </Container>
     </>
   );
-}
+};
 
-export default ItemTimeline
+export default ItemTimeline;

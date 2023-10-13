@@ -14,8 +14,11 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from "dayjs";
+import { addDonorItem } from "../../api"; // Import the API function for adding a donor item
+import { useNavigate } from "react-router-dom"; // Import the useNavigate hook
 
 export default function MakeNewDonation() {
+  const navigate = useNavigate();
   const [item, setItem] = useState({
     name: "",
     description: "",
@@ -59,17 +62,25 @@ export default function MakeNewDonation() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    // Print form data to the console
-    console.log("Item created:", item);
-    // Reset the form after submission
-    setItem({
-      name: "",
-      description: "",
-      quantity: "",
-      expirationDate: null,
-      dropLocation: "",
-      anonymousDonation: false,
-    });
+    // Call the API to add the donor item
+    addDonorItem(item)
+      .then(() => {
+        console.log("Donation submitted successfully.");
+        // Reset the form after submission
+        setItem({
+          name: "",
+          description: "",
+          quantity: "",
+          expirationDate: null,
+          dropLocation: "",
+          anonymousDonation: false,
+        });
+        // Navigate to the ListAllDonations page upon success
+        navigate("/listalldonations");
+      })
+      .catch((error) => {
+        console.error("Error submitting donation:", error);
+      });
   };
 
   return (

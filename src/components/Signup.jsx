@@ -1,28 +1,49 @@
-import * as React from 'react';
-import Avatar from '@mui/material/Avatar';
-import Button from '@mui/material/Button';
-import CssBaseline from '@mui/material/CssBaseline';
-import TextField from '@mui/material/TextField';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
-import Grid from '@mui/material/Grid';
-import Box from '@mui/material/Box';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import Typography from '@mui/material/Typography';
-import Container from '@mui/material/Container';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import * as React from "react";
+import Avatar from "@mui/material/Avatar";
+import Button from "@mui/material/Button";
+import CssBaseline from "@mui/material/CssBaseline";
+import TextField from "@mui/material/TextField";
+import Grid from "@mui/material/Grid";
+import Box from "@mui/material/Box";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import Typography from "@mui/material/Typography";
+import Container from "@mui/material/Container";
+import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Link, useNavigate } from "react-router-dom";
-
+import apis from "../api";
 
 const defaultTheme = createTheme();
-const Signup = ()=>{
 
-  
+if (apis.getCurrentUser()) {
+  localStorage.removeItem("user");
+}
 
-  const handleSubmit = ()=>{
-    //while handling signup
-    //only donar can signup. So use navigate after checking for credention and naviate to ('/donar')
-  }
+const Signup = () => {
+  const navigate = useNavigate();
+
+  const handleSubmit = async () => {
+    try {
+      // Get the email and password from the input fields
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      // Make the sign-up API call
+      const response = await apis.signUp({ email, password });
+
+      if (response.data.accessToken) {
+        // Save the user information to localStorage
+        localStorage.setItem("user", JSON.stringify(response.data));
+
+        // Redirect to the donor page
+        const userRole = response.data.role;
+        navigate("/donar");
+      } else {
+        alert("Sign-up failed. Please check your credentials.");
+      }
+    } catch (error) {
+      alert(`Error: ${error.response.data.message}`);
+    }
+  };
 
   return (
     <ThemeProvider theme={defaultTheme}>
@@ -31,42 +52,22 @@ const Signup = ()=>{
         <Box
           sx={{
             marginTop: 8,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
-          <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+          <Avatar sx={{ m: 1, bgcolor: "secondary.main" }}>
             <LockOutlinedIcon />
           </Avatar>
           <Typography component="h1" variant="h5">
             Sign up
           </Typography>
-          <Box noValidate onSubmit={handleSubmit} sx={{ mt: 3 }}>
+          <Box noValidate sx={{ mt: 3 }}>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  autoComplete="given-name"
-                  name="firstName"
-                  required
-                  fullWidth
-                  id="firstName"
-                  label="First Name"
-                  autoFocus
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  required
-                  fullWidth
-                  id="lastName"
-                  label="Last Name"
-                  name="lastName"
-                  autoComplete="family-name"
-                />
-              </Grid>
               <Grid item xs={12}>
                 <TextField
+                  id="email" // Add an id to the email input
                   required
                   fullWidth
                   id="email"
@@ -77,6 +78,7 @@ const Signup = ()=>{
               </Grid>
               <Grid item xs={12}>
                 <TextField
+                  id="password" // Add an id to the password input
                   required
                   fullWidth
                   name="password"
@@ -92,13 +94,14 @@ const Signup = ()=>{
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
+              onClick={handleSubmit} // Call the handleSubmit function when the button is clicked
             >
               Sign Up
             </Button>
             <Grid container>
               <Grid item>
                 <Link to={"/"} variant="body2">
-                    {"Don't have an account? Login"}
+                  {"Already have an account? Login"}
                 </Link>
               </Grid>
             </Grid>
@@ -107,6 +110,6 @@ const Signup = ()=>{
       </Container>
     </ThemeProvider>
   );
-}
+};
 
 export default Signup;

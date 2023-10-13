@@ -1,27 +1,56 @@
 import * as React from "react";
+import { useState } from "react"; // Import useState from React
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
 import TextField from "@mui/material/TextField";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Checkbox from "@mui/material/Checkbox";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Typography from "@mui/material/Typography";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import {Divider } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
+import apis from "../api";
 
 const defaultTheme = createTheme();
 
-const Login = ()=>{
+if (apis.getCurrentUser()) {
+  localStorage.removeItem("user");
+}
 
+const Login = () => {
+  const [email, setEmail] = useState(""); // State for email
+  const [password, setPassword] = useState(""); // State for password
+  const navigate = useNavigate();
 
-  const handleClick = ()=>{
-    //check for the user role. Then useNavigate to either render org,warehouse,donar
+  function getDashboardRouteForRole(role) {
+    switch (role) {
+      case "donor":
+        return "/donar";
+      case "org":
+        return "/org";
+      case "warehouse":
+        return "/warehouse";
+      default:
+        return "/"; // Default route for unknown roles
+    }
   }
+
+  const handleClick = async () => {
+    try {
+      const response = await apis.signIn({ email, password });
+      if (response.data.accessToken) {
+        localStorage.setItem("user", JSON.stringify(response.data));
+        const userRole = response.data.role;
+        navigate(getDashboardRouteForRole(userRole));
+      } else {
+        alert("Login failed. Please check your credentials.");
+      }
+    } catch (error) {
+      alert(`Error: ${error.response.data.message}`);
+    }
+  };
 
   return (
     <>
@@ -79,6 +108,8 @@ const Login = ()=>{
                   name="email"
                   autoComplete="email"
                   autoFocus
+                  value={email} // Bind value to email state
+                  onChange={(e) => setEmail(e.target.value)} // Update email state
                 />
                 <TextField
                   margin="normal"
@@ -89,8 +120,10 @@ const Login = ()=>{
                   type="password"
                   id="password"
                   autoComplete="current-password"
+                  value={password} // Bind value to password state
+                  onChange={(e) => setPassword(e.target.value)} // Update password state
                 />
-                
+
                 <Button
                   type="submit"
                   fullWidth
@@ -102,7 +135,7 @@ const Login = ()=>{
                 </Button>
                 <Grid container>
                   <Grid item>
-                    <Link to={'/signup'} variant="body2">
+                    <Link to={"/signup"} variant="body2">
                       {"Don't have an account? Sign Up"}
                     </Link>
                   </Grid>
@@ -114,6 +147,6 @@ const Login = ()=>{
       </ThemeProvider>
     </>
   );
-}
+};
 
 export default Login;
