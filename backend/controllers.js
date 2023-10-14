@@ -69,6 +69,7 @@ const orgItems = [
     status: "Reached Warehouse",
     expirationDate: "14/04/2023",
     anonymousDonation: true,
+    organization: "Org 1",
   },
   {
     id: 2,
@@ -78,6 +79,7 @@ const orgItems = [
     status: "Reached Organization",
     expirationDate: "14/05/2023",
     anonymousDonation: "Donor 1",
+    organization: "Org 2",
   },
 ];
 

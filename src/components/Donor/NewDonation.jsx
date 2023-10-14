@@ -53,6 +53,13 @@ export default function MakeNewDonation() {
     });
   };
 
+  const handleOrganizationChange = (event) => {
+    setItem({
+      ...item,
+      dropOrganization: event.target.value,
+    });
+  };
+
   const handleAnonymousDonationChange = (event) => {
     setItem({
       ...item,
@@ -73,6 +80,7 @@ export default function MakeNewDonation() {
           quantity: "",
           expirationDate: null,
           dropLocation: "",
+          dropOrganization: "",
           anonymousDonation: false,
         });
         // Navigate to the ListAllDonations page upon success
@@ -146,6 +154,20 @@ export default function MakeNewDonation() {
               <MenuItem value="Location 1">Location 1</MenuItem>
               <MenuItem value="Location 2">Location 2</MenuItem>
               <MenuItem value="Location 3">Location 3</MenuItem>
+            </TextField>
+            <TextField
+              fullWidth
+              label="Organization"
+              name="dropOrganization"
+              select
+              value={item.dropOrganization}
+              onChange={handleOrganizationChange}
+              required
+              margin="normal"
+            >
+              <MenuItem value="Organization 1">Organization 1</MenuItem>
+              <MenuItem value="Organization 2">Organization 2</MenuItem>
+              <MenuItem value="Organization 3">Organization 3</MenuItem>
             </TextField>
             <FormControlLabel
               control={
