@@ -1,199 +1,152 @@
 const jwt = require("jsonwebtoken"); // Import the jsonwebtoken library
-
-const mockDonor = [
-  {
-    id: 1,
-    username: "donorUser",
-    email: "donor@example.com",
-    password: "donorPassword",
-    role: "donor",
-  },
-  {
-    id: 2,
-    username: "donorUser2",
-    email: "donor2@example.com",
-    password: "donorPassword2",
-    role: "donor",
-  },
-];
-
-const mockOrg = [
-  {
-    id: 2,
-    username: "orgUser",
-    email: "org@example.com",
-    password: "orgPassword",
-    role: "org",
-  },
-];
-
-const mockWarehouse = [
-  {
-    id: 3,
-    username: "warehouseUser",
-    email: "warehouse@example.com",
-    password: "warehousePassword",
-    role: "warehouse",
-  },
-];
-
-const donors = [
-  {
-    name: "Donor Item 1",
-    description: "Item Desc 1",
-    quantity: 12,
-    expirationDate: "2023-10-22T18:30:00.000Z",
-    dropLocation: "Location 2",
-    anonymousDonation: false,
-    status: "Shipped from Warehouse",
-    id: 1,
-  },
-  {
-    name: "Donor Item 2",
-    description: "Another Description",
-    quantity: 8,
-    expirationDate: "2023-11-15T14:45:00.000Z",
-    dropLocation: "Location 1",
-    anonymousDonation: true,
-    status: "Reached Warehouse",
-    id: 2,
-  },
-];
-
-const orgItems = [
-  {
-    id: 1,
-    name: "Org Item 1",
-    description: "Org Description 1",
-    quantity: 8,
-    status: "Reached Warehouse",
-    expirationDate: "14/04/2023",
-    anonymousDonation: true,
-    organization: "Org 1",
-  },
-  {
-    id: 2,
-    name: "Org Item 2",
-    description: "Org Description 2",
-    quantity: 12,
-    status: "Reached Organization",
-    expirationDate: "14/05/2023",
-    anonymousDonation: "Donor 1",
-    organization: "Org 2",
-  },
-];
-
-const warehouseItems = [
-  {
-    id: 1,
-    name: "Warehouse Item 1",
-    description: "Warehouse Description 1",
-    price: 20.99,
-    quantity: 25,
-    status: "In Warehouse",
-    date: "16/04/2023",
-  },
-  {
-    id: 2,
-    name: "Warehouse Item 2",
-    description: "Warehouse Description 2",
-    price: 18.99,
-    quantity: 30,
-    status: "In Warehouse",
-    date: "17/05/2023",
-  },
-];
+const db = require("./db")
 
 const secretKey = "yourSecretKey"; // Replace with a strong, secret key
 
-const signin = (req, res) => {
-  const { email, password } = req.body;
-  let mockUser = null;
-  let mockArray;
-
-  // Try to find the user in the donor array
-  mockArray = mockDonor;
-  mockUser = mockArray.find(
-    (user) => user.email === email && user.password === password
-  );
-
-  // If not found in the donor array, try to find in the org array
-  if (!mockUser) {
-    mockArray = mockOrg;
-    mockUser = mockArray.find(
-      (user) => user.email === email && user.password === password
-    );
-  }
-
-  // If still not found, try to find in the warehouse array
-  if (!mockUser) {
-    mockArray = mockWarehouse;
-    mockUser = mockArray.find(
-      (user) => user.email === email && user.password === password
-    );
-  }
-
-  if (mockUser) {
-    // Generate a JWT token
-    const token = jwt.sign(
-      {
-        id: mockUser.id,
-        role: mockUser.role,
-      },
-      secretKey,
-      {
-        expiresIn: "1h", // Token expiration time (1 hour)
-      }
-    );
-
-    const response = {
-      success: true,
-      message: "Login successful",
-      accessToken: token, // Include the generated token
-      id: mockUser.id,
-      username: mockUser.username,
-      email: mockUser.email,
-      role: mockUser.role,
-    };
-
-    res.json(response);
-  } else {
-    res.status(401).json({
-      success: false,
-      message: "Login failed. Please check your credentials.",
-    });
-  }
-};
-
 const signup = (req, res) => {
   const { email, password } = req.body;
-  console.log(email, password);
-  // Check if a user with the same email already exists
-  const existingUser = mockDonor.find((user) => user.email == email);
 
-  if (existingUser) {
-    return res.status(400).json({
-      success: false,
-      message: "User with this email already exists. Please log in.",
-    });
-  } else {
-    // Generate a new donor user
-    const newUser = {
-      id: mockDonor.length + 1, // Generate a new unique ID
-      username: `donorUser${donors.length + 1}`,
-      email,
-      password,
-      role: "donor",
-    };
+  // Check if a user with the same email already exists in the donor table
+  db.query(
+    "SELECT DID FROM donor WHERE Email = ? UNION ALL SELECT OrgID FROM organization WHERE OrgEmail = ? UNION ALL SELECT CCID FROM collectioncenter WHERE CCEmail = ?",
+    [email, email, email],
+    (err, results) => {
+      if (err) {
+        console.error("Error executing query: " + err);
+        return res.status(500).json({ message: "Internal Server Error" });
+      }
 
-    // Add the new user to the donors array
-    donors.push(newUser);
+      if (results.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Account with this email already exists. Please log in.",
+        });
+      } else {
+        // Find the latest DID
+        db.query("SELECT MAX(DID) AS maxDID FROM donor", (err, maxResult) => {
+          if (err) {
+            console.error("Error executing query: " + err);
+            return res.status(500).json({ message: "Internal Server Error" });
+          }
 
-    // Generate a JWT token for the new user
+          const maxDID = maxResult[0].maxDID || 0;
+          const newDID = maxDID + 1;
+
+          // Generate a new donor user
+          const newUser = {
+            DID: newDID,
+            email,
+            password,
+          };
+
+          // Insert the new user into the donor table
+          db.query("INSERT INTO donor SET ?", newUser, (err, insertResult) => {
+            if (err) {
+              console.error("Error executing query: " + err);
+              return res.status(500).json({ message: "Internal Server Error" });
+            }
+
+            // Generate a JWT token for the new user
+            const token = jwt.sign(
+              {
+                id: newDID,
+                role: "donor",
+              },
+              secretKey,
+              {
+                expiresIn: "1h",
+              }
+            );
+
+            const response = {
+              success: true,
+              message: "Signup successful",
+              accessToken: token,
+              id: newDID,
+              email: email,
+              role: "donor",
+            };
+
+            res.status(201).json(response);
+          });
+        });
+      }
+    }
+  );
+};
+
+const signin = (req, res) => {
+  const { email, password } = req.body;
+  let user = null;
+
+  const queryDonor = () => {
+    db.query(
+      "SELECT DID, FName AS username, Email, 'donor' AS role FROM donor WHERE Email = ? AND Password = ?",
+      [email, password],
+      (err, donorResults) => {
+        if (err) {
+          console.error("Error executing query: " + err);
+          return res.status(500).json({ message: "Internal Server Error" });
+        }
+
+        if (donorResults.length > 0) {
+          user = donorResults[0];
+          generateTokenAndRespond(user);
+        } else {
+          queryOrganization();
+        }
+      }
+    );
+  };
+
+  const queryOrganization = () => {
+    db.query(
+      "SELECT OrgID, OrgName AS username, OrgEmail AS Email, 'org' AS role FROM organization WHERE OrgEmail = ? AND OrgPassword = ?",
+      [email, password],
+      (err, orgResults) => {
+        if (err) {
+          console.error("Error executing query: " + err);
+          return res.status(500).json({ message: "Internal Server Error" });
+        }
+
+        if (orgResults.length > 0) {
+          user = orgResults[0];
+          generateTokenAndRespond(user);
+        } else {
+          queryCollectionCenter();
+        }
+      }
+    );
+  };
+
+  const queryCollectionCenter = () => {
+    db.query(
+      "SELECT CCID, CCName AS username, CCEmail AS Email, 'warehouse' AS role FROM collectioncenter WHERE CCEmail = ? AND CCPassword = ?",
+      [email, password],
+      (err, ccResults) => {
+        if (err) {
+          console.error("Error executing query: " + err);
+          return res.status(500).json({ message: "Internal Server Error" });
+        }
+
+        if (ccResults.length > 0) {
+          user = ccResults[0];
+          generateTokenAndRespond(user);
+        } else {
+          res.status(401).json({
+            success: false,
+            message: "Login failed. Please check your credentials.",
+          });
+        }
+      }
+    );
+  };
+
+  const generateTokenAndRespond = (user) => {
     const token = jwt.sign(
       {
-        id: newUser.id,
-        role: newUser.role,
+        id: user.DID || user.OrgID || user.CCID,
+        role: user.role,
       },
       secretKey,
       {
@@ -203,87 +156,333 @@ const signup = (req, res) => {
 
     const response = {
       success: true,
-      message: "Signup successful",
+      message: "Login successful",
       accessToken: token,
-      id: newUser.id,
-      username: newUser.username,
-      email: newUser.email,
-      role: newUser.role,
+      id: user.DID || user.OrgID || user.CCID,
+      username: user.username,
+      email: user.email,
+      role: user.role,
     };
 
-    res.status(201).json(response);
-  }
+    res.json(response);
+  };
+
+  queryDonor();
 };
+
+// DONOR PAGE DISPLAY IN CREATE NEW DONATION
+function getItemNames(req, res) {
+  db.query('SELECT ItemName FROM item', (err, results) => {
+    if (err) {
+      console.error('Error retrieving ItemNames: ' + err);
+      res.status(500).json({ error: 'Internal Server Error' });
+    } else {
+      const itemNames = results.map((row) => row.ItemName);
+      console.log('Item Names:', itemNames);
+      res.status(200).json({ itemNames });
+    }
+  });
+}
+
+function getCCAddress(req, res) {
+  db.query('SELECT CCAddress FROM collectioncenter', (err, results) => {
+    if (err) {
+      console.error('Error retrieving CCAddress: ' + err);
+      res.status(500).json({ error: 'Internal Server Error' });
+    } else {
+      const ccAddresses = results.map((row) => row.CCAddress);
+      console.log('Collection Center Addresses:', ccAddresses);
+      res.status(200).json({ ccAddresses });
+    }
+  });
+}
+
+function getOrgName(req, res) {
+  db.query('SELECT OrgName FROM organization', (err, results) => {
+    if (err) {
+      console.error('Error retrieving OrgName: ' + err);
+      res.status(500).json({ error: 'Internal Server Error' });
+    } else {
+      const orgNames = results.map((row) => row.OrgName);
+      console.log('Organization Names:', orgNames);
+      res.status(200).json({ orgNames });
+    }
+  });
+}
+
 
 // Donor controller functions
+
 const addDonorItem = (req, res) => {
   const newItem = req.body;
-  newItem.status = "Donation Placed";
-  newItem.id = donors.length + 1;
-  donors.push(newItem);
-  console.log(donors);
-  res.status(201).json(newItem);
-};
+  const DID = req.user.DID; // Assuming you have the user's donor ID from JWT
 
-const getDonorItemById = (req, res) => {
-  const itemId = parseInt(req.params.itemid);
-  const item = donors.find((item) => item.id === itemId);
-  if (item) {
-    res.json(item);
-  } else {
-    res.status(404).json({ message: "Item not found" });
-  }
+  // Get the corresponding item, collection center, and organization details
+  const { name,OrgName,quantity, expirationDate, dropLocation, anonymousDonation } = newItem;
+
+  // Insert the donation into the database
+  const query = `
+    INSERT INTO donation (DID, IID, CCID, OrgID, Qty, UpdateTime, Status, Anonymity, DonatedDate, PickUpLoc, ExpDate)
+    VALUES (?, (SELECT IID FROM item WHERE ItemName = ?), (SELECT CCID FROM collectioncenter WHERE CCAddress = ?), (SELECT OrgID FROM organization WHERE OrgName = ?), ?, NOW(), 'Donated', ?, NOW(), ?, ?);
+  `;
+// name,description,quantity,expirationDate,dropLocation,anonymousDonation
+  db.query(
+    query,
+    [DID, name, dropLocation, OrgName, quantity, anonymousDonation, dropLocation, expirationDate],
+    (error) => {
+      if (error) {
+        console.error('Error inserting donation: ' + error);
+        res.status(500).json({ error: 'An error occurred while inserting the donation.' });
+      } else {
+        res.status(201).json({ message: 'Donation added successfully' });
+      }
+    }
+  );
 };
 
 const getAllDonorItems = (req, res) => {
-  res.json(donors);
+  const DID = req.user.DID; // Assuming you have the user's donor ID from JWT
+  const query = `
+    SELECT d.DonTranID, o.OrgName, i.ItemDesc, d.Status
+    FROM donation AS d
+    JOIN organization AS o ON d.OrgID = o.OrgID
+    JOIN item AS i ON d.IID = i.IID
+    WHERE d.DID = ?;
+  `;
+
+  db.query(query, [DID], (error, results) => {
+    if (error) {
+      console.error('Error retrieving donor items: ' + error);
+      res.status(500).json({ error: 'An error occurred while retrieving donor items.' });
+    } else {
+      res.json(results);
+    }
+  });
+};
+
+const getDonorItemById  = (req, res) => {
+  const DID = req.user.DID; // Assuming you have the user's donor ID from JWT
+  const IID = parseInt(req.params.iid);
+
+  const query = `
+    SELECT Status
+    FROM donation
+    WHERE DID = ? AND IID = ?;
+  `;
+
+  db.query(query, [DID, IID], (error, results) => {
+    if (error) {
+      console.error('Error retrieving item status: ' + error);
+      res.status(500).json({ error: 'An error occurred while retrieving the item status.' });
+    } else if (results.length > 0) {
+      res.json({ Status: results[0].Status });
+    } else {
+      res.status(404).json({ message: 'Item not found' });
+    }
+  });
+};
+
+const updateDonorProfile = (req, res) => {
+  const DID = req.user.DID; // Assuming you have the donor's ID from JWT
+  const { FName, LName, Phone, Address, DOB } = req.body; // Assuming the request body contains updated profile data
+
+  // Update the donor's profile in the Donor table
+  const query = `
+    UPDATE donor
+    SET FName = ?, LName = ?, Phone = ?, Address = ?, DOB = ?
+    WHERE DID = ?;
+  `;
+
+  db.query(query, [FName, LName, Phone, Address, DOB, DID], (error) => {
+    if (error) {
+      console.error('Error updating donor profile: ' + error);
+      res.status(500).json({ error: 'An error occurred while updating the donor profile.' });
+    } else {
+      res.json({ message: 'Donor profile updated successfully' });
+    }
+  });
+};
+
+const getDonorDonationDetails = (req, res) => {
+  const DID = req.user.DID; // Assuming you have the donor's ID from JWT
+
+  const query = `
+    SELECT i.ItemName, cc.CCAddr, o.OrgName, d.Qty, d.Anonymity, d.ExpDate
+    FROM donation AS d
+    JOIN item AS i ON d.IID = i.IID
+    JOIN collectioncenter AS cc ON d.CCID = cc.CCID
+    JOIN organization AS o ON d.OrgID = o.OrgID
+    WHERE d.DID = ?;
+  `;
+
+  db.query(query, [DID], (error, results) => {
+    if (error) {
+      console.error('Error retrieving item details: ' + error);
+      res.status(500).json({ error: 'An error occurred while retrieving item details.' });
+    } else {
+      res.json(results);
+    }
+  });
 };
 
 // Org controller functions
 const getOrgItemById = (req, res) => {
-  const itemId = parseInt(req.params.itemid);
-  const item = orgItems.find((item) => item.id === itemId);
-  if (item) {
-    res.json(item);
-  } else {
-    res.status(404).json({ message: "Item not found" });
-  }
+  const OrgID = req.user.OrgID; // Assuming you have the organization's ID from JWT
+  const IID = parseInt(req.params.iid);
+
+  const query = `
+    SELECT d.Status
+    FROM donation AS d
+    WHERE d.OrgID = ? AND d.IID = ?;
+  `;
+
+  db.query(query, [OrgID, IID], (error, results) => {
+    if (error) {
+      console.error('Error retrieving item status: ' + error);
+      res.status(500).json({ error: 'An error occurred while retrieving the item status.' });
+    } else if (results.length > 0) {
+      res.json({ Status: results[0].Status });
+    } else {
+      res.status(404).json({ message: 'Item not found' });
+    }
+  });
 };
 
 const getAllOrgItems = (req, res) => {
-  res.json(orgItems);
+  const OrgID = req.user.OrgID; // Assuming you have the organization's ID from JWT
+
+  const query = `
+    SELECT d.DonTranID, i.ItemName, i.ItemDesc, d.Status
+    FROM donation AS d
+    JOIN item AS i ON d.IID = i.IID
+    WHERE d.OrgID = ?;
+  `;
+
+  db.query(query, [OrgID], (error, results) => {
+    if (error) {
+      console.error('Error retrieving item details: ' + error);
+      res.status(500).json({ error: 'An error occurred while retrieving item details.' });
+    } else {
+      res.json(results);
+    }
+  });
+};
+
+const getOrgDonationDetails = (req, res) => {
+  const DID = req.user.DID; // Assuming you have the donor's ID from JWT
+
+  const query = `
+    SELECT i.ItemName, i.ItemDesc, i.ItemColor, i.Weight, d.Qty, 
+    CASE WHEN d.Anonymity = 0 THEN CONCAT(dn.FName, ' ', dn.LName) ELSE NULL END AS DonorName, d.ExpDate
+    FROM donation AS d
+    JOIN item AS i ON d.IID = i.IID
+    LEFT JOIN donor AS dn ON d.DID = dn.DID
+    WHERE d.DID = ?;
+  `;
+
+  db.query(query, [DID], (error, results) => {
+    if (error) {
+      console.error('Error retrieving item details: ' + error);
+      res.status(500).json({ error: 'An error occurred while retrieving item details.' });
+    } else {
+      res.json(results);
+    }
+  });
 };
 
 // Warehouse controller functions
 const getWarehouseItemById = (req, res) => {
-  const itemId = parseInt(req.params.itemid);
-  const item = warehouseItems.find((item) => item.id === itemId);
-  if (item) {
-    res.json(item);
-  } else {
-    res.status(404).json({ message: "Item not found" });
-  }
+  const CCID = req.user.CCID; // Assuming you have the collection center's ID from JWT
+  const IID = parseInt(req.params.iid);
+
+  const query = `
+    SELECT d.Status
+    FROM donation AS d
+    WHERE d.CCID = ? AND d.IID = ?;
+  `;
+
+  db.query(query, [CCID, IID], (error, results) => {
+    if (error) {
+      console.error('Error retrieving item status: ' + error);
+      res.status(500).json({ error: 'An error occurred while retrieving the item status.' });
+    } else if (results.length > 0) {
+      res.json({ Status: results[0].Status });
+    } else {
+      res.status(404).json({ message: 'Item not found' });
+    }
+  });
 };
 
 const getAllWarehouseItems = (req, res) => {
-  res.json(warehouseItems);
+  const CCID = req.user.CCID; // Assuming you have the collection center's ID from JWT
+
+  const query = `
+    SELECT d.DonTranID, i.ItemName, 
+    CASE WHEN d.Anonymity = 0 THEN CONCAT(dn.FName, ' ', dn.LName) ELSE 'Anonymous' END AS DonorName,
+    o.OrgName, d.Status
+    FROM donation AS d
+    JOIN item AS i ON d.IID = i.IID
+    LEFT JOIN donor AS dn ON d.DID = dn.DID
+    JOIN organization AS o ON d.OrgID = o.OrgID
+    WHERE d.CCID = ?;
+  `;
+
+  db.query(query, [CCID], (error, results) => {
+    if (error) {
+      console.error('Error retrieving item details: ' + error);
+      res.status(500).json({ error: 'An error occurred while retrieving item details.' });
+    } else {
+      res.json(results);
+    }
+  });
 };
 
 const updateWarehouseItemStatus = (req, res) => {
-  const itemId = parseInt(req.params.itemid);
-  const item = warehouseItems.find((item) => item.id === itemId);
-  if (item) {
-    const newStatus = req.body.status; // Assuming the request body contains the updated status
-    item.status = newStatus;
-    res.json(item);
-  } else {
-    res.status(404).json({ message: "Item not found" });
-  }
+  const CCID = req.user.CCID; // Assuming you have the collection center's ID from JWT
+  const IID = parseInt(req.params.iid);
+  const newStatus = req.body.status; // Assuming the request body contains the updated status
+
+  // Get the CCIncharge using the CCID
+  const queryIncharge = `
+    SELECT CCIncharge
+    FROM collectioncenter
+    WHERE CCID = ?;
+  `;
+
+  db.query(queryIncharge, [CCID], (error, resultsIncharge) => {
+    if (error) {
+      console.error('Error retrieving CCIncharge: ' + error);
+      res.status(500).json({ error: 'An error occurred while updating the item status.' });
+    } else if (resultsIncharge.length > 0) {
+      const CCIncharge = resultsIncharge[0].CCIncharge;
+
+      // Update the item status, UpdateTime, and UpdateBy
+      const queryUpdate = `
+        UPDATE donation
+        SET Status = ?, UpdateTime = NOW(), UpdateBy = ?
+        WHERE CCID = ? AND IID = ?;
+      `;
+
+      db.query(queryUpdate, [newStatus, CCIncharge, CCID, IID], (errorUpdate, resultsUpdate) => {
+        if (errorUpdate) {
+          console.error('Error updating item status: ' + errorUpdate);
+          res.status(500).json({ error: 'An error occurred while updating the item status.' });
+        } else {
+          res.json({ message: 'Item status updated successfully' });
+        }
+      });
+    } else {
+      res.status(404).json({ message: 'Collection center not found' });
+    }
+  });
 };
 
 module.exports = {
   signin,
   signup,
+  getItemNames,
+  getCCAddress,
+  getOrgName,
   addDonorItem,
   getDonorItemById,
   getAllDonorItems,
@@ -292,4 +491,7 @@ module.exports = {
   getWarehouseItemById,
   getAllWarehouseItems,
   updateWarehouseItemStatus,
+  updateDonorProfile,
+  getOrgDonationDetails,
+  getDonorDonationDetails,
 };
