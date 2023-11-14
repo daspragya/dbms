@@ -6,6 +6,7 @@ import DashboardDonor from "./Donor/Dashboard";
 import ListAllDonations from "./Donor/ListAll";
 import MakeNewDonation from "./Donor/NewDonation";
 import ItemDetails from "./Donor/ItemDetails";
+import UpdateProfile from "./Donor/UpdateProfile";
 
 import NavBarOrg from "./Organization/NavbarOrganization";
 import DashboardOrganization from "./Organization/Dashboard";
@@ -28,6 +29,7 @@ const App = () => {
           <Route path="/listalldonations" element={<ListAllDonations />} />
           <Route path="/itemdetail/:id" element={<ItemDetails />} />
           <Route path="/makenewdonation" element={<MakeNewDonation />} />
+          <Route path="/profile" element={<UpdateProfile />} />
 
           <Route path="/org" element={<DashboardOrganization />} />
           <Route path="/navbardorg" element={<NavBarOrg />} />

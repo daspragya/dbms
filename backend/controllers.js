@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken"); // Import the jsonwebtoken library
-const db = require("./db")
+const db = require("./db");
 
 const secretKey = "yourSecretKey"; // Replace with a strong, secret key
 
@@ -170,80 +170,101 @@ const signin = (req, res) => {
   queryDonor();
 };
 
-// DONOR PAGE DISPLAY IN CREATE NEW DONATION
-function getItemNames(req, res) {
-  db.query('SELECT ItemName FROM item', (err, results) => {
-    if (err) {
-      console.error('Error retrieving ItemNames: ' + err);
-      res.status(500).json({ error: 'Internal Server Error' });
-    } else {
-      const itemNames = results.map((row) => row.ItemName);
-      console.log('Item Names:', itemNames);
-      res.status(200).json({ itemNames });
+function getItemDetails(req, res) {
+  db.query(
+    "SELECT ItemName, Weight, ItemColor, ItemDesc FROM item",
+    (err, results) => {
+      if (err) {
+        console.error("Error retrieving item details: " + err);
+        res.status(500).json({ error: "Internal Server Error" });
+      } else {
+        const itemDetails = results.map((row) => ({
+          ItemName: row.ItemName,
+          Weight: row.Weight,
+          ItemColor: row.ItemColor,
+          ItemDesc: row.ItemDesc,
+        }));
+        res.status(200).json({ itemDetails });
+      }
     }
-  });
+  );
 }
 
 function getCCAddress(req, res) {
-  db.query('SELECT CCAddress FROM collectioncenter', (err, results) => {
+  db.query("SELECT CCAddress FROM collectioncenter", (err, results) => {
     if (err) {
-      console.error('Error retrieving CCAddress: ' + err);
-      res.status(500).json({ error: 'Internal Server Error' });
+      console.error("Error retrieving CCAddress: " + err);
+      res.status(500).json({ error: "Internal Server Error" });
     } else {
       const ccAddresses = results.map((row) => row.CCAddress);
-      console.log('Collection Center Addresses:', ccAddresses);
       res.status(200).json({ ccAddresses });
     }
   });
 }
 
 function getOrgName(req, res) {
-  db.query('SELECT OrgName FROM organization', (err, results) => {
+  db.query("SELECT OrgName FROM organization", (err, results) => {
     if (err) {
-      console.error('Error retrieving OrgName: ' + err);
-      res.status(500).json({ error: 'Internal Server Error' });
+      console.error("Error retrieving OrgName: " + err);
+      res.status(500).json({ error: "Internal Server Error" });
     } else {
       const orgNames = results.map((row) => row.OrgName);
-      console.log('Organization Names:', orgNames);
       res.status(200).json({ orgNames });
     }
   });
 }
 
-
 // Donor controller functions
 
 const addDonorItem = (req, res) => {
   const newItem = req.body;
-  const DID = req.user.DID; // Assuming you have the user's donor ID from JWT
+  const DID = req.DID; // Assuming you have the user's donor ID from JWT
 
   // Get the corresponding item, collection center, and organization details
-  const { name,OrgName,quantity, expirationDate, dropLocation, anonymousDonation } = newItem;
+  const {
+    ItemName,
+    OrgName,
+    quantity,
+    expirationDate,
+    dropLocation,
+    anonymousDonation,
+  } = newItem;
 
   // Insert the donation into the database
   const query = `
     INSERT INTO donation (DID, IID, CCID, OrgID, Qty, UpdateTime, Status, Anonymity, DonatedDate, PickUpLoc, ExpDate)
     VALUES (?, (SELECT IID FROM item WHERE ItemName = ?), (SELECT CCID FROM collectioncenter WHERE CCAddress = ?), (SELECT OrgID FROM organization WHERE OrgName = ?), ?, NOW(), 'Donated', ?, NOW(), ?, ?);
   `;
-// name,description,quantity,expirationDate,dropLocation,anonymousDonation
+  // name,description,quantity,expirationDate,dropLocation,anonymousDonation
   db.query(
     query,
-    [DID, name, dropLocation, OrgName, quantity, anonymousDonation, dropLocation, expirationDate],
+    [
+      DID,
+      ItemName,
+      dropLocation,
+      OrgName,
+      quantity,
+      anonymousDonation,
+      dropLocation,
+      expirationDate,
+    ],
     (error) => {
       if (error) {
-        console.error('Error inserting donation: ' + error);
-        res.status(500).json({ error: 'An error occurred while inserting the donation.' });
+        console.error("Error inserting donation: " + error);
+        res
+          .status(500)
+          .json({ error: "An error occurred while inserting the donation." });
       } else {
-        res.status(201).json({ message: 'Donation added successfully' });
+        res.status(201).json({ message: "Donation added successfully" });
       }
     }
   );
 };
 
 const getAllDonorItems = (req, res) => {
-  const DID = req.user.DID; // Assuming you have the user's donor ID from JWT
+  const DID = req.DID; // Assuming you have the user's donor ID from JWT
   const query = `
-    SELECT d.DonTranID, o.OrgName, i.ItemDesc, d.Status
+    SELECT d.DonTranID, o.OrgName, i.ItemName, d.PickUpLoc, d.Status
     FROM donation AS d
     JOIN organization AS o ON d.OrgID = o.OrgID
     JOIN item AS i ON d.IID = i.IID
@@ -252,39 +273,62 @@ const getAllDonorItems = (req, res) => {
 
   db.query(query, [DID], (error, results) => {
     if (error) {
-      console.error('Error retrieving donor items: ' + error);
-      res.status(500).json({ error: 'An error occurred while retrieving donor items.' });
+      console.error("Error retrieving donor items: " + error);
+      res
+        .status(500)
+        .json({ error: "An error occurred while retrieving donor items." });
     } else {
       res.json(results);
     }
   });
 };
 
-const getDonorItemById  = (req, res) => {
-  const DID = req.user.DID; // Assuming you have the user's donor ID from JWT
-  const IID = parseInt(req.params.iid);
+const getDonorFName = (req, res) => {
+  const DID = req.DID; // Assuming you have the user's donor ID from JWT
+  const query = "SELECT FName FROM donor WHERE DID = ?";
 
-  const query = `
-    SELECT Status
-    FROM donation
-    WHERE DID = ? AND IID = ?;
-  `;
-
-  db.query(query, [DID, IID], (error, results) => {
+  db.query(query, [DID], (error, results) => {
     if (error) {
-      console.error('Error retrieving item status: ' + error);
-      res.status(500).json({ error: 'An error occurred while retrieving the item status.' });
+      console.error("Error retrieving donor FName: " + error);
+      res
+        .status(500)
+        .json({ error: "An error occurred while retrieving donor FName." });
     } else if (results.length > 0) {
-      res.json({ Status: results[0].Status });
+      const donorFName = results[0].FName;
+      res.json({ FName: donorFName });
     } else {
-      res.status(404).json({ message: 'Item not found' });
+      res.status(404).json({ message: "Donor not found" });
     }
   });
 };
 
+// const getDonorItemById = (req, res) => {
+//   const DID = req.DID; // Assuming you have the user's donor ID from JWT
+//   const IID = parseInt(req.params.itemid);
+//   console.log(DID, IID);
+//   const query = `
+//     SELECT Status
+//     FROM donation
+//     WHERE DID = ? AND IID = ?;
+//   `;
+
+//   db.query(query, [DID, IID], (error, results) => {
+//     if (error) {
+//       console.error("Error retrieving item status: " + error);
+//       res
+//         .status(500)
+//         .json({ error: "An error occurred while retrieving the item status." });
+//     } else if (results.length > 0) {
+//       res.json({ Status: results[0].Status });
+//     } else {
+//       res.status(404).json({ message: "Item not found" });
+//     }
+//   });
+// };
+
 const updateDonorProfile = (req, res) => {
-  const DID = req.user.DID; // Assuming you have the donor's ID from JWT
-  const { FName, LName, Phone, Address, DOB } = req.body; // Assuming the request body contains updated profile data
+  const DID = req.DID; // Assuming you have the donor's ID from JWT
+  const { FName, LName, Phone, Address, dateOfBirth } = req.body; // Assuming the request body contains updated profile data
 
   // Update the donor's profile in the Donor table
   const query = `
@@ -292,33 +336,61 @@ const updateDonorProfile = (req, res) => {
     SET FName = ?, LName = ?, Phone = ?, Address = ?, DOB = ?
     WHERE DID = ?;
   `;
-
-  db.query(query, [FName, LName, Phone, Address, DOB, DID], (error) => {
+  db.query(query, [FName, LName, Phone, Address, dateOfBirth, DID], (error) => {
     if (error) {
-      console.error('Error updating donor profile: ' + error);
-      res.status(500).json({ error: 'An error occurred while updating the donor profile.' });
+      console.error("Error updating donor profile: " + error);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating the donor profile." });
     } else {
-      res.json({ message: 'Donor profile updated successfully' });
+      res.json({ message: "Donor profile updated successfully" });
     }
   });
 };
 
-const getDonorDonationDetails = (req, res) => {
-  const DID = req.user.DID; // Assuming you have the donor's ID from JWT
+const getDonorDetails = (req, res) => {
+  const DID = req.DID; // Assuming you have the donor's ID from JWT
 
   const query = `
-    SELECT i.ItemName, cc.CCAddr, o.OrgName, d.Qty, d.Anonymity, d.ExpDate
-    FROM donation AS d
-    JOIN item AS i ON d.IID = i.IID
-    JOIN collectioncenter AS cc ON d.CCID = cc.CCID
-    JOIN organization AS o ON d.OrgID = o.OrgID
-    WHERE d.DID = ?;
+    SELECT *
+    FROM donor
+    WHERE DID = ?;
   `;
 
   db.query(query, [DID], (error, results) => {
     if (error) {
-      console.error('Error retrieving item details: ' + error);
-      res.status(500).json({ error: 'An error occurred while retrieving item details.' });
+      console.error("Error retrieving donor details: " + error);
+      res
+        .status(500)
+        .json({ error: "An error occurred while retrieving donor details." });
+    } else if (results.length > 0) {
+      res.json(results[0]); // Assuming there is only one record for a given DID
+    } else {
+      res.status(404).json({ message: "Donor not found" });
+    }
+  });
+};
+
+const getDonorItemById = (req, res) => {
+  const DonTranID = parseInt(req.params.itemid); // Assuming you have the donor's ID from JWT
+
+  const query = `
+    SELECT i.ItemName, cc.CCAddress, o.OrgName, i.ItemDesc, d.Qty, d.ExpDate, d.Status,
+    CASE WHEN d.Anonymity = 0 THEN CONCAT(dn.FName, ' ', dn.LName) ELSE NULL END AS DonorName
+    FROM donation AS d
+    JOIN item AS i ON d.IID = i.IID
+    JOIN collectioncenter AS cc ON d.CCID = cc.CCID
+    JOIN organization AS o ON d.OrgID = o.OrgID
+    LEFT JOIN donor AS dn ON d.DID = dn.DID
+    WHERE d.DonTranID = ?;
+  `;
+
+  db.query(query, [DonTranID], (error, results) => {
+    if (error) {
+      console.error("Error retrieving item details: " + error);
+      res
+        .status(500)
+        .json({ error: "An error occurred while retrieving item details." });
     } else {
       res.json(results);
     }
@@ -327,29 +399,36 @@ const getDonorDonationDetails = (req, res) => {
 
 // Org controller functions
 const getOrgItemById = (req, res) => {
-  const OrgID = req.user.OrgID; // Assuming you have the organization's ID from JWT
-  const IID = parseInt(req.params.iid);
+  const DonTranID = parseInt(req.params.itemid); // Assuming you have the donor's ID from JWT
 
   const query = `
-    SELECT d.Status
+    SELECT i.ItemName, i.ItemDesc, d.Qty, d.ExpDate, d.Status,
+    CASE WHEN d.Anonymity = 0 THEN CONCAT(dn.FName, ' ', dn.LName) ELSE NULL END AS DonorName
     FROM donation AS d
-    WHERE d.OrgID = ? AND d.IID = ?;
+    JOIN item AS i ON d.IID = i.IID
+    JOIN collectioncenter AS cc ON d.CCID = cc.CCID
+    JOIN organization AS o ON d.OrgID = o.OrgID
+    LEFT JOIN donor AS dn ON d.DID = dn.DID
+    WHERE d.DonTranID = ?;
   `;
 
-  db.query(query, [OrgID, IID], (error, results) => {
+  db.query(query, [DonTranID], (error, results) => {
     if (error) {
-      console.error('Error retrieving item status: ' + error);
-      res.status(500).json({ error: 'An error occurred while retrieving the item status.' });
+      console.error("Error retrieving item status: " + error);
+      res
+        .status(500)
+        .json({ error: "An error occurred while retrieving the item status." });
     } else if (results.length > 0) {
-      res.json({ Status: results[0].Status });
+      console.log(results);
+      res.json({ results });
     } else {
-      res.status(404).json({ message: 'Item not found' });
+      res.status(404).json({ message: "Item not found" });
     }
   });
 };
 
 const getAllOrgItems = (req, res) => {
-  const OrgID = req.user.OrgID; // Assuming you have the organization's ID from JWT
+  const OrgID = req.OrgId; // Assuming you have the organization's ID from JWT
 
   const query = `
     SELECT d.DonTranID, i.ItemName, i.ItemDesc, d.Status
@@ -360,61 +439,68 @@ const getAllOrgItems = (req, res) => {
 
   db.query(query, [OrgID], (error, results) => {
     if (error) {
-      console.error('Error retrieving item details: ' + error);
-      res.status(500).json({ error: 'An error occurred while retrieving item details.' });
+      console.error("Error retrieving item details: " + error);
+      res
+        .status(500)
+        .json({ error: "An error occurred while retrieving item details." });
     } else {
       res.json(results);
     }
   });
 };
 
-const getOrgDonationDetails = (req, res) => {
-  const DID = req.user.DID; // Assuming you have the donor's ID from JWT
+// const getOrgDonationDetails = (req, res) => {
+//   const DID = req.DID; // Assuming you have the donor's ID from JWT
 
-  const query = `
-    SELECT i.ItemName, i.ItemDesc, i.ItemColor, i.Weight, d.Qty, 
-    CASE WHEN d.Anonymity = 0 THEN CONCAT(dn.FName, ' ', dn.LName) ELSE NULL END AS DonorName, d.ExpDate
-    FROM donation AS d
-    JOIN item AS i ON d.IID = i.IID
-    LEFT JOIN donor AS dn ON d.DID = dn.DID
-    WHERE d.DID = ?;
-  `;
+//   const query = `
+//     SELECT i.ItemName, i.ItemDesc, i.ItemColor, i.Weight, d.Qty,
+//     CASE WHEN d.Anonymity = 0 THEN CONCAT(dn.FName, ' ', dn.LName) ELSE NULL END AS DonorName, d.ExpDate
+//     FROM donation AS d
+//     JOIN item AS i ON d.IID = i.IID
+//     LEFT JOIN donor AS dn ON d.DID = dn.DID
+//     WHERE d.DID = ?;
+//   `;
 
-  db.query(query, [DID], (error, results) => {
-    if (error) {
-      console.error('Error retrieving item details: ' + error);
-      res.status(500).json({ error: 'An error occurred while retrieving item details.' });
-    } else {
-      res.json(results);
-    }
-  });
-};
+//   db.query(query, [DID], (error, results) => {
+//     if (error) {
+//       console.error("Error retrieving item details: " + error);
+//       res
+//         .status(500)
+//         .json({ error: "An error occurred while retrieving item details." });
+//     } else {
+//       res.json(results);
+//     }
+//   });
+// };
 
 // Warehouse controller functions
-const getWarehouseItemById = (req, res) => {
-  const CCID = req.user.CCID; // Assuming you have the collection center's ID from JWT
-  const IID = parseInt(req.params.iid);
 
-  const query = `
-    SELECT d.Status
-    FROM donation AS d
-    WHERE d.CCID = ? AND d.IID = ?;
-  `;
+// const getWarehouseItemById = (req, res) => {
+//   const CCID = req.CCID; // Assuming you have the collection center's ID from JWT
+//   const IID = parseInt(req.params.iid);
 
-  db.query(query, [CCID, IID], (error, results) => {
-    if (error) {
-      console.error('Error retrieving item status: ' + error);
-      res.status(500).json({ error: 'An error occurred while retrieving the item status.' });
-    } else if (results.length > 0) {
-      res.json({ Status: results[0].Status });
-    } else {
-      res.status(404).json({ message: 'Item not found' });
-    }
-  });
-};
+//   const query = `
+//     SELECT d.Status
+//     FROM donation AS d
+//     WHERE d.CCID = ? AND d.IID = ?;
+//   `;
+
+//   db.query(query, [CCID, IID], (error, results) => {
+//     if (error) {
+//       console.error("Error retrieving item status: " + error);
+//       res
+//         .status(500)
+//         .json({ error: "An error occurred while retrieving the item status." });
+//     } else if (results.length > 0) {
+//       res.json({ Status: results[0].Status });
+//     } else {
+//       res.status(404).json({ message: "Item not found" });
+//     }
+//   });
+// };
 
 const getAllWarehouseItems = (req, res) => {
-  const CCID = req.user.CCID; // Assuming you have the collection center's ID from JWT
+  const CCID = req.CCID; // Assuming you have the collection center's ID from JWT
 
   const query = `
     SELECT d.DonTranID, i.ItemName, 
@@ -429,8 +515,10 @@ const getAllWarehouseItems = (req, res) => {
 
   db.query(query, [CCID], (error, results) => {
     if (error) {
-      console.error('Error retrieving item details: ' + error);
-      res.status(500).json({ error: 'An error occurred while retrieving item details.' });
+      console.error("Error retrieving item details: " + error);
+      res
+        .status(500)
+        .json({ error: "An error occurred while retrieving item details." });
     } else {
       res.json(results);
     }
@@ -438,10 +526,10 @@ const getAllWarehouseItems = (req, res) => {
 };
 
 const updateWarehouseItemStatus = (req, res) => {
-  const CCID = req.user.CCID; // Assuming you have the collection center's ID from JWT
-  const IID = parseInt(req.params.iid);
+  const CCID = req.CCID; // Assuming you have the collection center's ID from JWT
+  const IID = parseInt(req.params.itemid);
   const newStatus = req.body.status; // Assuming the request body contains the updated status
-
+  console.log(CCID, IID, newStatus);
   // Get the CCIncharge using the CCID
   const queryIncharge = `
     SELECT CCIncharge
@@ -451,8 +539,10 @@ const updateWarehouseItemStatus = (req, res) => {
 
   db.query(queryIncharge, [CCID], (error, resultsIncharge) => {
     if (error) {
-      console.error('Error retrieving CCIncharge: ' + error);
-      res.status(500).json({ error: 'An error occurred while updating the item status.' });
+      console.error("Error retrieving CCIncharge: " + error);
+      res
+        .status(500)
+        .json({ error: "An error occurred while updating the item status." });
     } else if (resultsIncharge.length > 0) {
       const CCIncharge = resultsIncharge[0].CCIncharge;
 
@@ -463,16 +553,22 @@ const updateWarehouseItemStatus = (req, res) => {
         WHERE CCID = ? AND IID = ?;
       `;
 
-      db.query(queryUpdate, [newStatus, CCIncharge, CCID, IID], (errorUpdate, resultsUpdate) => {
-        if (errorUpdate) {
-          console.error('Error updating item status: ' + errorUpdate);
-          res.status(500).json({ error: 'An error occurred while updating the item status.' });
-        } else {
-          res.json({ message: 'Item status updated successfully' });
+      db.query(
+        queryUpdate,
+        [newStatus, CCIncharge, CCID, IID],
+        (errorUpdate, resultsUpdate) => {
+          if (errorUpdate) {
+            console.error("Error updating item status: " + errorUpdate);
+            res.status(500).json({
+              error: "An error occurred while updating the item status.",
+            });
+          } else {
+            res.json({ message: "Item status updated successfully" });
+          }
         }
-      });
+      );
     } else {
-      res.status(404).json({ message: 'Collection center not found' });
+      res.status(404).json({ message: "Collection center not found" });
     }
   });
 };
@@ -480,18 +576,22 @@ const updateWarehouseItemStatus = (req, res) => {
 module.exports = {
   signin,
   signup,
-  getItemNames,
+  //getItemNames,
+  getItemDetails,
+  getDonorFName,
   getCCAddress,
   getOrgName,
   addDonorItem,
   getDonorItemById,
   getAllDonorItems,
+  updateDonorProfile,
+  getDonorDetails,
   getOrgItemById,
   getAllOrgItems,
-  getWarehouseItemById,
+  //getWarehouseItemById,
   getAllWarehouseItems,
   updateWarehouseItemStatus,
-  updateDonorProfile,
-  getOrgDonationDetails,
-  getDonorDonationDetails,
+
+  //getOrgDonationDetails,
+  //getDonorDonationDetails,
 };

@@ -15,6 +15,7 @@ export const signIn = (payload) =>
 
 export const logout = () => {
   localStorage.removeItem("user");
+  window.location.href = "/";
 };
 
 export const getCurrentUser = () => {
@@ -27,14 +28,20 @@ export const getCurrentUser = () => {
 export const addDonorItem = (payload) => api.post("/donor/addItem", payload);
 export const getDonorItemById = (itemId) => api.get(`/donor/getItem/${itemId}`);
 export const getAllDonorItems = () => api.get("/donor/getAllItems");
-
+export const getOrgNames = () => api.get("/donor/getOrgNames");
+export const getCCAddress = () => api.get("/donor/getCCAddress");
+export const updateProfile = (payload) =>
+  api.post("/donor/updateProfile", payload);
+export const getUserProfile = () => api.get("/donor/profile");
+export const getItemDetails = () => api.get("/donor/itemDetails");
+export const getFName = () => api.get("/donor/FName");
 // Org routes
 export const getOrgItemById = (itemId) => api.get(`/org/getItem/${itemId}`);
 export const getAllOrgItems = () => api.get("/org/getAllItems");
 
 // Warehouse routes
-export const getWarehouseItemById = (itemId) =>
-  api.get(`/warehouse/getItem/${itemId}`);
+// export const getWarehouseItemById = (itemId) =>
+//   api.get(`/warehouse/getItem/${itemId}`);
 export const getAllWarehouseItems = () => api.get("/warehouse/getAllItems");
 export const updateWarehouseItemStatus = (itemId, payload) =>
   api.put(`/warehouse/updateStatus/${itemId}`, payload);
@@ -63,6 +70,23 @@ api.interceptors.request.use(
   }
 );
 
+api.interceptors.response.use(
+  (response) => {
+    if (response.status === 403) {
+      apis.logout();
+      window.location.href = "/";
+    }
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      apis.logout();
+      window.location.href = "/";
+    }
+    return Promise.reject(error);
+  }
+);
+
 const apis = {
   signUp,
   signIn,
@@ -72,7 +96,7 @@ const apis = {
   getAllDonorItems,
   getOrgItemById,
   getAllOrgItems,
-  getWarehouseItemById,
+  //getWarehouseItemById,
   getAllWarehouseItems,
   updateWarehouseItemStatus,
   getCurrentUser,

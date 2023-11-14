@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Paper,
   Typography,
@@ -13,30 +13,94 @@ import NavBar from "./DonarNavbar";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import DonorSides from "../../assets/DonorSides.jpg";
+
 import dayjs from "dayjs";
-import { addDonorItem } from "../../api"; // Import the API function for adding a donor item
-import { useNavigate } from "react-router-dom"; // Import the useNavigate hook
+import {
+  addDonorItem,
+  getOrgNames,
+  getCCAddress,
+  getItemDetails,
+  getFName,
+} from "../../api";
+import { useNavigate } from "react-router-dom";
 
 export default function MakeNewDonation() {
   const navigate = useNavigate();
   const [item, setItem] = useState({
-    name: "",
-    description: "",
+    ItemName: "",
     quantity: "",
     expirationDate: null,
     dropLocation: "",
+    OrgName: "",
     anonymousDonation: false,
   });
+  const [qty, setQuantity] = useState();
+  const [orgNames, setOrgNames] = useState([]);
+  const [ccAddresses, setCcAddresses] = useState([]);
+  const [allDonorItems, setAllDonorItems] = useState([]);
+  const [selectedItemDetails, setSelectedItemDetails] = useState({
+    ItemDesc: "",
+    ItemColor: "",
+    Weight: "",
+  });
+  const [donorFirstName, setDonorFirstName] = useState("");
+
+  useEffect(() => {
+    getFName()
+      .then((res) => {
+        setDonorFirstName(res.data.FName);
+        if (!res.data.FName) {
+          showUpdateProfileAlert();
+        }
+      })
+      .catch((error) =>
+        console.error("Error fetching donor's first name:", error)
+      );
+
+    getOrgNames()
+      .then((res) => setOrgNames(res.data.orgNames))
+      .catch((error) =>
+        console.error("Error fetching organization names:", error)
+      );
+
+    getCCAddress()
+      .then((res) => setCcAddresses(res.data.ccAddresses))
+      .catch((error) => console.error("Error fetching CC addresses:", error));
+
+    getItemDetails()
+      .then((res) => {
+        setAllDonorItems(res.data.itemDetails);
+      })
+      .catch((error) => console.error("Error fetching donor items:", error));
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    if (name === "quantity" && parseFloat(value) < 0) {
-      return;
-    }
+
+    const selectedItem = allDonorItems.find(
+      (donorItem) => donorItem.ItemName === value
+    );
+
     setItem({
       ...item,
-      [name]: value,
+      ItemName: value,
     });
+
+    setSelectedItemDetails({
+      ItemDesc: selectedItem?.ItemDesc || "",
+      ItemColor: selectedItem?.ItemColor || "",
+      Weight: selectedItem?.Weight || "",
+    });
+  };
+
+  const handleQuantityChange = (event) => {
+    if (event.target.value > 0) {
+      setItem({
+        ...item,
+        quantity: event.target.value,
+      });
+    }
   };
 
   const handleExpirationDateChange = (date) => {
@@ -56,34 +120,41 @@ export default function MakeNewDonation() {
   const handleOrganizationChange = (event) => {
     setItem({
       ...item,
-      dropOrganization: event.target.value,
+      OrgName: event.target.value,
     });
   };
 
   const handleAnonymousDonationChange = (event) => {
-    setItem({
-      ...item,
-      anonymousDonation: event.target.checked,
-    });
+    if (!donorFirstName) {
+      event.preventDefault();
+      showUpdateProfileAlert();
+    } else {
+      setItem({
+        ...item,
+        anonymousDonation: event.target.checked,
+      });
+    }
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    // Call the API to add the donor item
+
+    const formattedDate = item.expirationDate
+      ? dayjs(item.expirationDate).format("YYYY-MM-DD")
+      : null;
+    item.expirationDate = formattedDate;
+
     addDonorItem(item)
       .then(() => {
-        console.log("Donation submitted successfully.");
-        // Reset the form after submission
+        alert("Donation submitted successfully.");
         setItem({
-          name: "",
-          description: "",
+          ItemName: "",
           quantity: "",
           expirationDate: null,
           dropLocation: "",
-          dropOrganization: "",
+          OrgName: "",
           anonymousDonation: false,
         });
-        // Navigate to the ListAllDonations page upon success
         navigate("/listalldonations");
       })
       .catch((error) => {
@@ -91,12 +162,41 @@ export default function MakeNewDonation() {
       });
   };
 
+  const showUpdateProfileAlert = () => {
+    const result = window.confirm(
+      "Profile page not updated! Your donation will be anonymous. Do you want to update your profile now?"
+    );
+
+    if (result) {
+      navigate("/profile");
+    } else {
+      setItem({
+        ...item,
+        anonymousDonation: true,
+      });
+    }
+  };
+
   return (
-    <>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundImage: `url(${DonorSides})`,
+        backgroundRepeat: "repeat",
+      }}
+    >
       <NavBar />
       <Container maxWidth="md">
-        <Paper elevation={3} style={{ padding: "20px", marginTop: "20px" }}>
-          <Typography variant="h5" gutterBottom>
+        <Paper
+          elevation={3}
+          style={{
+            padding: "20px",
+            marginTop: "20px",
+            backgroundColor: "#afe2c8",
+            boxShadow: "0px 0px 15px 5px #508276",
+          }}
+        >
+          <Typography variant="h5" gutterBottom style={{ color: "#3a5e56" }}>
             Create Donation
           </Typography>
           <form onSubmit={handleSubmit}>
@@ -104,21 +204,42 @@ export default function MakeNewDonation() {
               fullWidth
               label="Item Name"
               name="name"
-              value={item.name}
+              select
+              value={item.ItemName}
               onChange={handleChange}
               required
               margin="normal"
+              style={{ backgroundColor: "#bee8d3" }}
+            >
+              {allDonorItems.map((donorItem) => (
+                <MenuItem key={donorItem.ItemName} value={donorItem.ItemName}>
+                  {donorItem.ItemName}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              fullWidth
+              label="Item Description"
+              name="desc"
+              value={selectedItemDetails.ItemDesc}
+              margin="normal"
+              style={{ backgroundColor: "#bee8d3" }}
             />
             <TextField
               fullWidth
-              label="Description"
-              name="description"
-              value={item.description}
-              onChange={handleChange}
-              multiline
-              rows={4}
-              required
+              label="Item Color"
+              name="color"
+              value={selectedItemDetails.ItemColor}
               margin="normal"
+              style={{ backgroundColor: "#bee8d3" }}
+            />
+            <TextField
+              fullWidth
+              label="Max Item Weight"
+              name="desc"
+              value={selectedItemDetails.Weight}
+              margin="normal"
+              style={{ backgroundColor: "#bee8d3" }}
             />
             <TextField
               fullWidth
@@ -126,9 +247,10 @@ export default function MakeNewDonation() {
               name="quantity"
               type="number"
               value={item.quantity}
-              onChange={handleChange}
+              onChange={handleQuantityChange}
               required
               margin="normal"
+              style={{ backgroundColor: "#bee8d3" }}
             />
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DatePicker
@@ -139,6 +261,7 @@ export default function MakeNewDonation() {
                 required
                 fullWidth
                 margin="normal"
+                style={{ backgroundColor: "#bee8d3" }}
               />
             </LocalizationProvider>
             <TextField
@@ -150,24 +273,30 @@ export default function MakeNewDonation() {
               onChange={handleDropLocationChange}
               required
               margin="normal"
+              style={{ backgroundColor: "#bee8d3" }}
             >
-              <MenuItem value="Location 1">Location 1</MenuItem>
-              <MenuItem value="Location 2">Location 2</MenuItem>
-              <MenuItem value="Location 3">Location 3</MenuItem>
+              {ccAddresses.map((address) => (
+                <MenuItem key={address} value={address}>
+                  {address}
+                </MenuItem>
+              ))}
             </TextField>
             <TextField
               fullWidth
               label="Organization"
-              name="dropOrganization"
+              name="OrgName"
               select
-              value={item.dropOrganization}
+              value={item.OrgName}
               onChange={handleOrganizationChange}
               required
               margin="normal"
+              style={{ backgroundColor: "#bee8d3" }}
             >
-              <MenuItem value="Organization 1">Organization 1</MenuItem>
-              <MenuItem value="Organization 2">Organization 2</MenuItem>
-              <MenuItem value="Organization 3">Organization 3</MenuItem>
+              {orgNames.map((orgName) => (
+                <MenuItem key={orgName} value={orgName}>
+                  {orgName}
+                </MenuItem>
+              ))}
             </TextField>
             <FormControlLabel
               control={
@@ -175,6 +304,7 @@ export default function MakeNewDonation() {
                   checked={item.anonymousDonation}
                   onChange={handleAnonymousDonationChange}
                   name="anonymousDonation"
+                  style={{ color: "#508276" }} // Set the color to green when checked
                 />
               }
               label="Anonymous Donation"
@@ -185,25 +315,33 @@ export default function MakeNewDonation() {
                 type="submit"
                 variant="contained"
                 color="primary"
-                style={{ marginRight: "10px" }}
+                style={{
+                  marginRight: "10px",
+                  backgroundColor: "#508276",
+                  color: "#fff",
+                }}
               >
                 Make Donation
               </Button>
               <Button
                 variant="outlined"
                 onClick={() => {
-                  if (window.confirm("Are you sure you want to cancel?")) {
-                    // Reset the form if confirmed
+                  if (
+                    window.confirm(
+                      "Are you sure you want to cancel? Your changes will not be saved."
+                    )
+                  ) {
                     setItem({
-                      name: "",
-                      description: "",
+                      ItemName: "",
                       quantity: "",
                       expirationDate: null,
                       dropLocation: "",
+                      OrgName: "",
                       anonymousDonation: false,
                     });
                   }
                 }}
+                style={{ color: "#3a5e56", borderColor: "#508276" }}
               >
                 Cancel Donation
               </Button>
@@ -211,6 +349,6 @@ export default function MakeNewDonation() {
           </form>
         </Paper>
       </Container>
-    </>
+    </div>
   );
 }

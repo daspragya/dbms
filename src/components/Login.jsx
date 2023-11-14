@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState } from "react"; // Import useState from React
+import { useState } from "react";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -13,15 +13,29 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Link, useNavigate } from "react-router-dom";
 import apis from "../api";
 
-const defaultTheme = createTheme();
+import background from "../assets/Signin.jpg";
+
+const customTheme = createTheme({
+  palette: {
+    primary: {
+      main: "#508276", // Set the main color for primary elements
+    },
+    secondary: {
+      main: "#d3869c", // Set the main color for secondary elements
+    },
+    background: {
+      default: "#edf4f0", // Set the default background color
+    },
+  },
+});
 
 if (apis.getCurrentUser()) {
   localStorage.removeItem("user");
 }
 
 const Login = () => {
-  const [email, setEmail] = useState(""); // State for email
-  const [password, setPassword] = useState(""); // State for password
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   function getDashboardRouteForRole(role) {
@@ -54,7 +68,7 @@ const Login = () => {
 
   return (
     <>
-      <ThemeProvider theme={defaultTheme}>
+      <ThemeProvider theme={customTheme}>
         <Grid container component="main" sx={{ height: "100vh" }}>
           <CssBaseline />
           <Grid
@@ -63,8 +77,7 @@ const Login = () => {
             sm={4}
             md={7}
             sx={{
-              backgroundImage:
-                "url(https://source.unsplash.com/random?wallpapers)",
+              backgroundImage: `url(${background})`,
               backgroundRepeat: "no-repeat",
               backgroundColor: (t) =>
                 t.palette.mode === "light"
@@ -82,6 +95,7 @@ const Login = () => {
             component={Paper}
             elevation={6}
             square
+            sx={{ backgroundColor: "#e3f3ea" }}
           >
             <Box
               sx={{
@@ -96,7 +110,7 @@ const Login = () => {
                 <LockOutlinedIcon />
               </Avatar>
               <Typography component="h1" variant="h5">
-                Sign in
+                Login
               </Typography>
               <Box noValidate sx={{ mt: 1 }}>
                 <TextField
@@ -108,8 +122,8 @@ const Login = () => {
                   name="email"
                   autoComplete="email"
                   autoFocus
-                  value={email} // Bind value to email state
-                  onChange={(e) => setEmail(e.target.value)} // Update email state
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
                 <TextField
                   margin="normal"
@@ -120,8 +134,8 @@ const Login = () => {
                   type="password"
                   id="password"
                   autoComplete="current-password"
-                  value={password} // Bind value to password state
-                  onChange={(e) => setPassword(e.target.value)} // Update password state
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
 
                 <Button
@@ -131,12 +145,17 @@ const Login = () => {
                   sx={{ mt: 3, mb: 2 }}
                   onClick={handleClick}
                 >
-                  Sign In
+                  Login
                 </Button>
                 <Grid container>
                   <Grid item>
-                    <Link to={"/signup"} variant="body2">
-                      {"Don't have an account? Sign Up"}
+                    Don't have an account?
+                    <Link
+                      to={"/signup"}
+                      variant="body2"
+                      style={{ color: "#508276" }}
+                    >
+                      {" Sign Up"}
                     </Link>
                   </Grid>
                 </Grid>

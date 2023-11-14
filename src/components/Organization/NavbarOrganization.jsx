@@ -13,16 +13,12 @@ import Tooltip from "@mui/material/Tooltip";
 import MenuItem from "@mui/material/MenuItem";
 import AdbIcon from "@mui/icons-material/Adb";
 import { Link } from "react-router-dom";
+import { logout } from "../../api";
+import Logo from "../../assets/Logo.jpg";
 
-const NavBarOrg=()=> {
+const NavBarOrg = () => {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
-
-  const handleLogout = () => {
-    //handle logout here;
-    //remove jwt token;
-    //use hook navigate: navigate it to login page;
-  };
 
   const handleOpenNavMenu = (event) => {
     setAnchorElNav(event.currentTarget);
@@ -40,35 +36,38 @@ const NavBarOrg=()=> {
   };
 
   return (
-    <AppBar
-      position="static"
-      sx={{ backgroundColor: "#28242C", height: "14vh" }}
-    >
+    <AppBar position="static" sx={{ background: "#0D5F5A" }}>
       <Container maxWidth="xl">
         <Toolbar disableGutters>
-          <AdbIcon
+          <Avatar
+            alt="Logo"
+            src={Logo}
             sx={{
               display: { xs: "none", md: "flex" },
-              mr: 2,
-              fontSize: "10vmin",
+              marginRight: "18px",
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
             }}
           />
-          <Typography
-            variant="h4"
-            noWrap
-            sx={{
-              mr: 2,
-              display: { xs: "none", md: "flex" },
-              fontFamily: "monospace",
-              fontWeight: 700,
-              letterSpacing: ".3rem",
-              color: "inherit",
-            }}
-          >
-            <Link to={'/org'} style={{ textDecoration: "none", color: "white" }}>
+          <Link to={"/org"}>
+            <Typography
+              variant="h6"
+              noWrap
+              component="a"
+              sx={{
+                mr: 2,
+                display: { xs: "none", md: "flex" },
+                fontFamily: "monospace",
+                fontWeight: 700,
+                letterSpacing: ".3rem",
+                textDecoration: "none",
+                color: "#fff",
+              }}
+            >
               ShareBite
-            </Link>
-          </Typography>
+            </Typography>
+          </Link>
 
           <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>
             <IconButton
@@ -102,7 +101,7 @@ const NavBarOrg=()=> {
               <MenuItem onClick={handleCloseNavMenu}>
                 <Typography textAlign="center">
                   <Link
-                    to={'/listalldonationsorg'}
+                    to={"/listalldonationsorg"}
                     style={{ textDecoration: "none", color: "black" }}
                   >
                     List All Donations
@@ -112,24 +111,24 @@ const NavBarOrg=()=> {
             </Menu>
           </Box>
           <AdbIcon sx={{ display: { xs: "flex", md: "none" }, mr: 1 }} />
-          <Link to={'/org'}>
-          <Typography
-            variant="h5"
-            noWrap
-            component="a"
-            sx={{
-              mr: 2,
-              display: { xs: "flex", md: "none" },
-              flexGrow: 1,
-              fontFamily: "monospace",
-              fontWeight: 700,
-              letterSpacing: ".3rem",
-              color: "inherit",
-              textDecoration: "none",
-            }}
-          >
-            ShareBite
-          </Typography>
+          <Link to={"/org"}>
+            <Typography
+              variant="h5"
+              noWrap
+              component="a"
+              sx={{
+                mr: 2,
+                display: { xs: "flex", md: "none" },
+                flexGrow: 1,
+                fontFamily: "monospace",
+                fontWeight: 700,
+                letterSpacing: ".3rem",
+                color: "inherit",
+                textDecoration: "none",
+              }}
+            >
+              ShareBite
+            </Typography>
           </Link>
           <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
             <Button
@@ -142,10 +141,12 @@ const NavBarOrg=()=> {
               }}
             >
               <Link
-                to={'/listalldonationsorg'}
+                to={"/listalldonationsorg"}
                 style={{ textDecoration: "none", color: "white" }}
               >
-                List All Donations
+                <Typography textAlign="center" sx={{ color: "#fff" }}>
+                  List All Donations
+                </Typography>
               </Link>
             </Button>
           </Box>
@@ -153,11 +154,27 @@ const NavBarOrg=()=> {
           <Box sx={{ flexGrow: 0 }}>
             <Tooltip title="Open settings">
               <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar alt="Remy Sharp" src="/static/images/avatar/2.jpg" />
+                <Avatar
+                  alt="Org"
+                  sx={{
+                    display: { xs: "none", md: "flex" },
+                    marginRight: "18px",
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "50%",
+                    bgcolor: "#afe2c8",
+                    color: "#3a5e56",
+                  }}
+                >
+                  O
+                </Avatar>
               </IconButton>
             </Tooltip>
             <Menu
-              sx={{ mt: "45px" }}
+              sx={{
+                mt: "45px",
+                "& .MuiMenu-paper": { backgroundColor: "#0A4E47" },
+              }}
               id="menu-appbar"
               anchorEl={anchorElUser}
               anchorOrigin={{
@@ -172,28 +189,31 @@ const NavBarOrg=()=> {
               open={Boolean(anchorElUser)}
               onClose={handleCloseUserMenu}
             >
-              <MenuItem>
-                <Typography textAlign="center">
-                  <Link
-                    to={''}
-                    style={{ textDecoration: "none", color: "black" }}
-                  >
-                    Profile
-                  </Link>
-                </Typography>
+              <MenuItem onClick={handleCloseUserMenu}>
+                <Link to="/org">
+                  <Typography textAlign="center" sx={{ color: "#ffffff" }}>
+                    HomePage
+                  </Typography>
+                </Link>
               </MenuItem>
-              <MenuItem>
-                <Typography textAlign="center">
-                  <Link
-                    to={'/org'}
-                    style={{ textDecoration: "none", color: "black" }}
-                  >
-                    Home Page
-                  </Link>
+              <MenuItem
+                onClick={() => {
+                  logout()
+                    .then(() => {
+                      console.log("User logged out successfully");
+                      window.location.href = "/login";
+                    })
+                    .catch((error) => {
+                      console.error("Error logging out: ", error);
+                    });
+                }}
+              >
+                <Typography
+                  textAlign="center"
+                  style={{ cursor: "pointer", color: "#ffffff" }}
+                >
+                  Logout
                 </Typography>
-              </MenuItem>
-              <MenuItem onClick={handleLogout}>
-                <Typography textAlign="center">Logout</Typography>
               </MenuItem>
             </Menu>
           </Box>
@@ -201,6 +221,6 @@ const NavBarOrg=()=> {
       </Container>
     </AppBar>
   );
-}
+};
 
 export default NavBarOrg;

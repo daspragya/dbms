@@ -6,6 +6,7 @@ const middlewares = require("./middleware");
 // Auth routes
 router.post("/auth/signin", controllers.signin);
 router.post("/auth/signup", controllers.signup);
+
 // Donor routes
 router.post(
   "/donor/addItem",
@@ -22,6 +23,34 @@ router.get(
   middlewares.verifyDonor,
   controllers.getAllDonorItems
 );
+router.get(
+  "/donor/getOrgNames",
+  middlewares.verifyDonor,
+  controllers.getOrgName
+);
+router.get(
+  "/donor/getCCAddress",
+  middlewares.verifyDonor,
+  controllers.getCCAddress
+);
+router.post(
+  "/donor/updateProfile",
+  middlewares.verifyDonor,
+  controllers.updateDonorProfile
+);
+
+router.get(
+  "/donor/profile",
+  middlewares.verifyDonor,
+  controllers.getDonorDetails
+);
+
+router.get(
+  "/donor/itemDetails",
+  middlewares.verifyDonor,
+  controllers.getItemDetails
+);
+router.get("/donor/FName", middlewares.verifyDonor, controllers.getDonorFName);
 
 // Org routes
 router.get(
@@ -36,11 +65,11 @@ router.get(
 );
 
 // Warehouse routes
-router.get(
-  "/warehouse/getItem/:itemid",
-  middlewares.verifyWarehouse,
-  controllers.getWarehouseItemById
-);
+// router.get(
+//   "/warehouse/getItem/:itemid",
+//   middlewares.verifyWarehouse,
+//   controllers.getWarehouseItemById
+// );
 router.get(
   "/warehouse/getAllItems",
   middlewares.verifyWarehouse,
