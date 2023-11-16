@@ -23,7 +23,17 @@ export default function ItemTimeline({ itemId }) {
     apis
       .getOrgItemById(itemId)
       .then((response) => {
-        setItem(response.data.results[0]);
+        let itemRes = response.data.results[0];
+        console.log(itemRes);
+        const date = new Date(itemRes.ExpDate);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1; // Months are zero-based, so we add 1
+        const day = date.getDate();
+        const formattedDate = `${year}-${month
+          .toString()
+          .padStart(2, "0")}-${day.toString().padStart(2, "0")}`;
+        itemRes.ExpDate = formattedDate;
+        setItem(itemRes);
       })
       .catch((error) => {
         console.error("Error fetching item details: ", error);
