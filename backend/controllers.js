@@ -527,9 +527,9 @@ const getAllWarehouseItems = (req, res) => {
 
 const updateWarehouseItemStatus = (req, res) => {
   const CCID = req.CCID; // Assuming you have the collection center's ID from JWT
-  const IID = parseInt(req.params.itemid);
+  const DonTranID = parseInt(req.params.itemid);
   const newStatus = req.body.status; // Assuming the request body contains the updated status
-  console.log(CCID, IID, newStatus);
+  console.log(CCID, DonTranID, newStatus);
   // Get the CCIncharge using the CCID
   const queryIncharge = `
     SELECT CCIncharge
@@ -550,12 +550,12 @@ const updateWarehouseItemStatus = (req, res) => {
       const queryUpdate = `
         UPDATE donation
         SET Status = ?, UpdateTime = NOW(), UpdateBy = ?
-        WHERE CCID = ? AND IID = ?;
+        WHERE CCID = ? AND DonTranID = ?;
       `;
 
       db.query(
         queryUpdate,
-        [newStatus, CCIncharge, CCID, IID],
+        [newStatus, CCIncharge, CCID, DonTranID],
         (errorUpdate, resultsUpdate) => {
           if (errorUpdate) {
             console.error("Error updating item status: " + errorUpdate);

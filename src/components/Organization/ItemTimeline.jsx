@@ -23,8 +23,7 @@ export default function ItemTimeline({ itemId }) {
     apis
       .getOrgItemById(itemId)
       .then((response) => {
-        console.log(response.data);
-        setItem(response.data);
+        setItem(response.data.results[0]);
       })
       .catch((error) => {
         console.error("Error fetching item details: ", error);
@@ -124,21 +123,20 @@ export default function ItemTimeline({ itemId }) {
               style={{ fontSize: "1.2rem", color: "#508276" }}
             >
               <strong style={{ color: "#3a5e56" }}>Description:</strong>{" "}
-              {item.description}
+              {item.ItemDesc}
             </Typography>
             <Typography
               variant="body1"
               style={{ fontSize: "1.2rem", color: "#508276" }}
             >
-              <strong style={{ color: "#3a5e56" }}>Quantity:</strong>{" "}
-              {item.quantity}
+              <strong style={{ color: "#3a5e56" }}>Quantity:</strong> {item.Qty}
             </Typography>
             <Typography
               variant="body1"
               style={{ fontSize: "1.2rem", color: "#508276" }}
             >
               <strong style={{ color: "#3a5e56" }}>Expiration Date:</strong>{" "}
-              {item.expirationDate}
+              {item.ExpDate}
             </Typography>
             <Typography
               variant="body1"
